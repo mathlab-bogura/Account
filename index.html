@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>আমার হিসাব অ্যাপ - প্রো</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --bg-color: #e0e5ec;
+        --text-color: #333;
+        --shadow-light: #ffffff;
+        --shadow-dark: #a3b1c6;
+        --primary: #4a5568;
+        --deposit: #28a745;
+        --expense: #dc3545;
+    }
+
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        padding: 10px;
+        min-height: 100vh;
+        box-sizing: border-box;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 450px;
+        background: var(--bg-color);
+        padding: 20px;
+        border-radius: 30px;
+        box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+        position: relative;
+        padding-bottom: 80px; 
+    }
+
+    .printable-report {
+        background: #ffffff;
+        padding: 20px;
+        border-radius: 15px;
+        color: #000;
+    }
+
+    .header-info {
+        text-align: center;
+        margin-bottom: 15px;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background: #fff;
+    }
+
+    .copyright {
+        font-size: 12px;
+        margin-bottom: 4px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .header-info h2 { margin: 5px 0 0; font-size: 18px; }
+    .date-text { font-size: 12px; color: #555; }
+
+    select, input {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 15px;
+        background: var(--bg-color);
+        box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+        font-size: 14px;
+        outline: none;
+        color: #333;
+        box-sizing: border-box;
+        margin-bottom: 15px;
+        appearance: none;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .summary-box {
+        position: relative;
+        padding: 15px 5px;
+        border-radius: 15px;
+        text-align: center;
+        overflow: hidden !important; 
+        background: #f8f9fa;
+        border: 1px solid #ccc;
+        z-index: 1;
+    }
+
+    .summary-box h4 { 
+        margin: 0 0 5px; 
+        font-size: 11px; 
+        color: #000; 
+        position: relative; 
+        z-index: 3; 
+        font-weight: bold;
+    }
+    
+    .summary-box p { 
+        margin: 0; 
+        font-size: 12px; 
+        font-weight: bold; 
+        position: relative; 
+        z-index: 3; 
+    }
+
+    .water {
+        position: absolute;
+        bottom: 0;
+        left: -50%;
+        width: 200%;
+        height: 0%; 
+        border-radius: 40%;
+        opacity: 0.5;
+        z-index: 2;
+        transition: height 0.8s ease-in-out;
+        animation: waveMotion 4s infinite ease-in-out alternate;
+    }
+
+    .water.wave2 {
+        opacity: 0.3;
+        border-radius: 35%;
+        animation: waveMotionReverse 3s infinite ease-in-out alternate;
+    }
+
+    .deposit-water { background-color: #28a745; }
+    .expense-water { background-color: #dc3545; }
+    .balance-water { background-color: #007bff; }
+
+    @keyframes waveMotion {
+        0% { transform: translateX(0) rotate(-4deg); }
+        50% { transform: translateX(8px) rotate(4deg); }
+        100% { transform: translateX(0) rotate(-4deg); }
+    }
+
+    @keyframes waveMotionReverse {
+        0% { transform: translateX(0) rotate(4deg); }
+        50% { transform: translateX(-8px) rotate(-4deg); }
+        100% { transform: translateX(0) rotate(4deg); }
+    }
+
+    .chart-container {
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background: #fff;
+    }
+
+    .history {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background: #fff;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid #ddd; font-size: 12px; color: #000; }
+    .del-btn { cursor: pointer; color: red; background: none; border: none; font-size: 14px; padding: 0; box-shadow: none; }
+
+    .fab {
+        position: fixed;
+        bottom: 20px;
+        right: 50%;
+        transform: translateX(50%);
+        width: 60px;
+        height: 60px;
+        background-color: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 30px;
+        box-shadow: 5px 5px 15px var(--shadow-dark);
+        cursor: pointer;
+        z-index: 100;
+        border: none;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .modal {
+        background: var(--bg-color);
+        padding: 20px;
+        border-radius: 25px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 10px 10px 20px var(--shadow-dark);
+    }
+
+    .type-toggle {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .type-btn {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        border-radius: 15px;
+        cursor: pointer;
+        font-weight: bold;
+        background: var(--bg-color);
+        box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+    }
+    .type-btn.active.expense { background-color: var(--expense); color: white; }
+    .type-btn.active.deposit { background-color: var(--deposit); color: white; }
+
+    .action-btns { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-save { flex: 2; background-color: var(--primary); color: white; border: none; padding: 12px; border-radius: 15px; font-weight: bold; cursor: pointer; }
+    .btn-cancel { flex: 1; background-color: #999; color: white; border: none; padding: 12px; border-radius: 15px; font-weight: bold; cursor: pointer; }
+
+    .export-btns { display: flex; gap: 10px; margin-top: 20px; }
+    .export-btns button { flex: 1; padding: 10px; border: none; border-radius: 15px; background: #fff; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 5px 5px 10px var(--shadow-dark); }
+
+    @media print {
+        .no-print { display: none !important; }
+        table th:last-child, table td:last-child { display: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <select id="monthSelector" class="no-print" onchange="updateUI()" style="text-align:center; font-weight:bold; cursor:pointer;"></select>
+
+    <div class="summary-grid no-print">
+        <div class="summary-box">
+            <div class="water deposit-water" id="waterDeposit"></div>
+            <div class="water wave2 deposit-water" id="waterDeposit2"></div>
+            <h4>মোট জমা</h4>
+            <p id="totalDeposit">৳ 0</p>
+        </div>
+        <div class="summary-box">
+            <div class="water expense-water" id="waterExpense"></div>
+            <div class="water wave2 expense-water" id="waterExpense2"></div>
+            <h4>মোট ব্যয়</h4>
+            <p id="totalExpense">৳ 0</p>
+        </div>
+        <div class="summary-box">
+            <div class="water balance-water" id="waterBalance"></div>
+            <div class="water wave2 balance-water" id="waterBalance2"></div>
+            <h4>অবশিষ্ট</h4>
+            <p id="totalBalance">৳ 0</p>
+        </div>
+    </div>
+
+    <div class="printable-report" id="printableArea">
+        <div class="header-info">
+            <div class="copyright">মেধাস্বত্ত্ব ꧁༺ 𝕄@ℍ𝕄𝕌_𝔻𝕌𝕃 ℍ@𝕊@ℕ ༻꧂</div>
+            <h2>আমার হিসাব রিপোর্ট</h2>
+            <div class="date-text" id="reportDateRange"></div>
+        </div>
+
+        <div class="history">
+            <table>
+                <thead>
+                    <tr>
+                        <th>বিবরণ</th>
+                        <th>পরিমাণ</th>
+                        <th>তারিখ</th>
+                        <th class="no-print" style="width:30px; text-align:center;">মুছুন</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="chart-container no-print" style="margin-top: 20px;">
+        <canvas id="expenseChart" height="180"></canvas>
+    </div>
+
+    <div style="margin-top: 15px;" class="no-print">
+        <input type="text" id="searchInput" placeholder="🔍 বিবরণ বা ক্যাটাগরি খুঁজুন..." onkeyup="updateUI()">
+    </div>
+
+    <div class="export-btns no-print">
+        <button onclick="generatePDF()">🖨️ PDF প্রিন্ট</button>
+        <button onclick="exportCSV()">📊 Excel (CSV)</button>
+    </div>
+</div>
+
+<button class="fab no-print" onclick="openModal()">+</button>
+
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <h3 style="margin-top: 0; text-align: center;">নতুন হিসাব যোগ করুন</h3>
+        
+        <div class="type-toggle">
+            <div class="type-btn active expense" id="btnExpense" onclick="setType('expense')">➖ ব্যয়</div>
+            <div class="type-btn" id="btnDeposit" onclick="setType('deposit')">➕ জমা</div>
+        </div>
+
+        <select id="categorySelect" onchange="handleNewCategory(this)"></select>
+        
+        <input type="text" id="description" placeholder="সংক্ষিপ্ত বিবরণ লিখুন">
+        <input type="number" id="amount" placeholder="টাকার পরিমাণ (৳)">
+        
+        <div class="action-btns">
+            <button class="btn-save" onclick="addTransaction()">সেভ করুন</button>
+            <button class="btn-cancel" onclick="closeModal()">বাতিল</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let transactions = JSON.parse(localStorage.getItem('myTransactionsPro')) || [];
+    let currentType = 'expense';
+    let expenseChartInstance = null;
+
+    let categories = JSON.parse(localStorage.getItem('myCategoriesCustom')) || {
+        expense: ['খাবার', 'যাতায়াত', 'ইলেকট্রনিক্স প্রজেক্ট', 'বই ও স্টেশনারি', 'চিকিৎসা', 'মোবাইল/ইন্টারনেট', 'অন্যান্য'],
+        deposit: ['টিউশন ফি', 'বেতন', 'উপহার', 'অন্যান্য']
+    };
+
+    const now = new Date();
+
+    function autoCleanOldData() {
+        const thresholdDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+        transactions = transactions.filter(t => new Date(t.date) >= thresholdDate);
+        localStorage.setItem('myTransactionsPro', JSON.stringify(transactions));
+    }
+
+    function populateMonthSelector() {
+        const selector = document.getElementById('monthSelector');
+        selector.innerHTML = '';
+        for (let i = 0; i < 6; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const option = document.createElement('option');
+            option.value = d.toISOString(); 
+            option.text = d.toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+            if(i === 0) option.selected = true;
+            selector.appendChild(option);
+        }
+    }
+
+    function openModal() {
+        document.getElementById('addModal').style.display = 'flex';
+        setType(currentType); 
+    }
+    
+    function closeModal() {
+        document.getElementById('addModal').style.display = 'none';
+        document.getElementById('amount').value = '';
+        document.getElementById('description').value = '';
+    }
+
+    function setType(type) {
+        currentType = type;
+        const btnExp = document.getElementById('btnExpense');
+        const btnDep = document.getElementById('btnDeposit');
+        const catSelect = document.getElementById('categorySelect');
+
+        if(type === 'expense') {
+            btnExp.classList.add('active', 'expense');
+            btnDep.classList.remove('active', 'deposit');
+        } else {
+            btnDep.classList.add('active', 'deposit');
+            btnExp.classList.remove('active', 'expense');
+        }
+
+        let options = categories[type].map(c => `<option value="${c}">${c}</option>`).join('');
+        options += `<option value="ADD_NEW" style="color:var(--primary); font-weight:bold;">➕ নিজের মতো নতুন ক্যাটাগরি তৈরি করুন</option>`;
+        catSelect.innerHTML = options;
+    }
+
+    function handleNewCategory(selectObj) {
+        if (selectObj.value === 'ADD_NEW') {
+            const newCat = prompt("আপনার নতুন ক্যাটারগরির নাম লিখুন:");
+            if (newCat && newCat.trim() !== "") {
+                const trimmedCat = newCat.trim();
+                categories[currentType].unshift(trimmedCat); 
+                localStorage.setItem('myCategoriesCustom', JSON.stringify(categories));
+                setType(currentType); 
+                document.getElementById('categorySelect').value = trimmedCat; 
+            } else {
+                setType(currentType); 
+            }
+        }
+    }
+
+    function addTransaction() {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const category = document.getElementById('categorySelect').value;
+        const desc = document.getElementById('description').value || category;
+
+        if (isNaN(amount) || amount <= 0) return alert("সঠিক টাকার পরিমাণ লিখুন।");
+        if (category === 'ADD_NEW') return alert("দয়া করে একটি ক্যাটাগরি নির্বাচন করুন।");
+
+        transactions.push({
+            id: Date.now(),
+            desc, category, amount, 
+            type: currentType, 
+            date: new Date().toISOString()
+        });
+
+        localStorage.setItem('myTransactionsPro', JSON.stringify(transactions));
+        closeModal();
+        document.getElementById('monthSelector').selectedIndex = 0;
+        updateUI();
+    }
+
+    function deleteTransaction(id) {
+        if(confirm("আপনি কি এই হিসাবটি মুছে ফেলতে চান?")) {
+            transactions = transactions.filter(t => t.id !== id);
+            localStorage.setItem('myTransactionsPro', JSON.stringify(transactions));
+            updateUI();
+        }
+    }
+
+    function updateUI() {
+        autoCleanOldData();
+        
+        const listEle = document.getElementById('transactionList');
+        const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+        const selectedDate = new Date(document.getElementById('monthSelector').value);
+        
+        const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+
+        const monthNameYear = selectedDate.toLocaleDateString('bn-BD', { month: 'long', year: 'numeric' });
+        document.getElementById('reportDateRange').innerText = `মাসের রিপোর্ট: ${monthNameYear}`;
+
+        listEle.innerHTML = '';
+        let totalDeposit = 0, totalExpense = 0;
+        let expenseByCategory = {};
+
+        const filtered = transactions.filter(t => {
+            const tDate = new Date(t.date);
+            const matchesMonth = tDate >= startOfMonth && tDate <= endOfMonth;
+            const matchesSearch = t.desc.toLowerCase().includes(searchQuery) || t.category.toLowerCase().includes(searchQuery);
+            return matchesMonth && matchesSearch;
+        }).reverse();
+
+        filtered.forEach(t => {
+            if (t.type === 'deposit') totalDeposit += t.amount;
+            else {
+                totalExpense += t.amount;
+                expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
+            }
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <strong>${t.category}</strong><br>
+                    <small style="color:#555;">${t.desc}</small>
+                </td>
+                <td style="font-weight: bold;">
+                    ${t.type === 'deposit' ? '+' : '-'} ৳${t.amount}
+                </td>
+                <td>${new Date(t.date).toLocaleDateString('bn-BD', {day:'numeric', month:'short'})}</td>
+                <td class="no-print" style="text-align:center;">
+                    <button class="del-btn" onclick="deleteTransaction(${t.id})">🗑️</button>
+                </td>
+            `;
+            listEle.appendChild(row);
+        });
+
+        document.getElementById('totalDeposit').innerText = `৳ ${totalDeposit}`;
+        document.getElementById('totalExpense').innerText = `৳ ${totalExpense}`;
+        const balance = totalDeposit - totalExpense;
+        document.getElementById('totalBalance').innerText = `৳ ${balance}`;
+
+        const maxLimit = 100000;
+        let depHeight = Math.min((totalDeposit / maxLimit) * 100, 100);
+        let expHeight = Math.min((totalExpense / maxLimit) * 100, 100);
+        let balHeight = Math.min((Math.abs(balance) / maxLimit) * 100, 100);
+
+        document.getElementById('waterDeposit').style.height = `${depHeight}%`;
+        document.getElementById('waterDeposit2').style.height = `${depHeight}%`;
+        
+        document.getElementById('waterExpense').style.height = `${expHeight}%`;
+        document.getElementById('waterExpense2').style.height = `${expHeight}%`;
+        
+        document.getElementById('waterBalance').style.height = `${balHeight}%`;
+        document.getElementById('waterBalance2').style.height = `${balHeight}%`;
+
+        updateChart(expenseByCategory);
+    }
+
+    function updateChart(expenseData) {
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        const labels = Object.keys(expenseData);
+        const data = Object.values(expenseData);
+
+        if(expenseChartInstance) expenseChartInstance.destroy();
+
+        if(labels.length === 0) {
+            expenseChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: ['কোনো খরচ নেই'], datasets: [{ data: [1], backgroundColor: ['#ddd'] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+            return;
+        }
+
+        expenseChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { font: { size: 10, family: 'Segoe UI' } } }
+                }
+            }
+        });
+    }
+
+    function generatePDF() {
+        const element = document.getElementById('printableArea');
+        
+        // পিডিএফ তৈরির সময় ডিলিট বাটনগুলোর কলাম সাময়িকভাবে লুকিয়ে ফেলা হচ্ছে
+        const noPrintElements = element.querySelectorAll('.no-print');
+        noPrintElements.forEach(el => el.style.display = 'none');
+
+        const opt = {
+            margin: 5, 
+            filename: 'হিসাব_রিপোর্ট.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPdf: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            // পিডিএফ সেভ হওয়ার পর আবার আগের মতো বাটনগুলো ফিরিয়ে দেওয়া হচ্ছে
+            noPrintElements.forEach(el => el.style.display = '');
+        });
+    }
+
+    function exportCSV() {
+        const selectedDate = new Date(document.getElementById('monthSelector').value);
+        const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+        
+        let csvContent = "data:text/csv;charset=utf-8,তারিখ,ধরন,ক্যাটাগরি,বিবরণ,পরিমাণ(টাকা)\n";
+        
+        transactions.forEach(t => {
+        const tDate = new Date(t.date);
+        if(tDate >= startOfMonth && tDate <= endOfMonth) {
+        const typeName = t.type === 'deposit' ? 'জমা' : 'ব্যয়';
+        const dText = tDate.toLocaleDateString('en-GB');
+        csvContent += `${dText},${typeName},${t.category},${t.desc},${t.amount}\n`;
+        }
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "Hisab_Report.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        }
+        
+        populateMonthSelector();
+        updateUI();
+        </script>
+        
+        </body>
+        </html>
