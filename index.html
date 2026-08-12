@@ -244,7 +244,10 @@
 <body>
 
 <div class="container">
-    <select id="monthSelector" class="no-print" onchange="updateUI()" style="text-align:center; font-weight:bold; cursor:pointer;"></select>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;" class="no-print">
+        <select id="monthSelector" onchange="updateUI()" style="text-align:center; font-weight:bold; cursor:pointer; margin-bottom:0; flex-grow: 1;"></select>
+        <button onclick="fetchDataFromSheet()" style="width: 50px; border:none; border-radius:15px; background:var(--bg-color); box-shadow:5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); cursor:pointer; font-size:16px;" title="সিঙ্ক করুন">🔄</button>
+    </div>
 
     <div class="summary-grid no-print">
         <div class="summary-box">
@@ -331,6 +334,9 @@
     let currentType = 'expense';
     let expenseChartInstance = null;
 
+    // আপনার নতুন ওয়েব অ্যাপ লিংক এখানে গ্লোবালি দেওয়া হলো
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyaGpvV4WXXa_f_L7_y1jR9gKNYEHrEy6NGHYf2WvKNncBl8_SNksaIadRU4C6YEH2KNw/exec";
+
     let categories = JSON.parse(localStorage.getItem('myCategoriesCustom')) || {
         expense: ['খাবার', 'যাতায়াত', 'ইলেকট্রনিক্স প্রজেক্ট', 'বই ও স্টেশনারি', 'চিকিৎসা', 'মোবাইল/ইন্টারনেট', 'অন্যান্য'],
         deposit: ['টিউশন ফি', 'বেতন', 'উপহার', 'অন্যান্য']
@@ -355,6 +361,43 @@
             if(i === 0) option.selected = true;
             selector.appendChild(option);
         }
+    }
+
+    function fetchDataFromSheet() {
+        if (!WEB_APP_URL) return;
+        
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    transactions = data.map((item, index) => {
+                        let parsedDate = new Date();
+                        if (item.date) {
+                            let parts = item.date.split('/');
+                            if(parts.length === 3) {
+                                parsedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                            } else {
+                                parsedDate = new Date(item.date);
+                            }
+                        }
+                        return {
+                            id: Date.now() + index,
+                            desc: item.desc || item.category,
+                            category: item.category,
+                            amount: parseFloat(item.amount) || 0,
+                            type: item.type,
+                            date: parsedDate.toISOString()
+                        };
+                    });
+                    localStorage.setItem('myTransactionsPro', JSON.stringify(transactions));
+                    updateUI();
+                    alert("গুগল শিট থেকে সফলভাবে ডেটা সিঙ্ক করা হয়েছে!");
+                }
+            })
+            .catch(err => {
+                console.error("ডেটা আনতে সমস্যা হয়েছে:", err);
+                alert("সিঙ্ক করতে সমস্যা হয়েছে। ইন্টারনেট সংযোগ চেক করুন।");
+            });
     }
 
     function openModal() {
@@ -424,8 +467,6 @@
         updateUI();
 
         // --- গুগল শিটে অটোমেটিক ডেটা পাঠানোর কোড ---
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxfXVNsqjqP7acpSdZiER_hTS38uU4QQZ4SXynIhNNEZ-w3AWg73ncSj7g7bqky5B8N/exec";
-
         if (WEB_APP_URL !== "") {
             fetch(WEB_APP_URL, {
                 method: "POST",
@@ -507,97 +548,97 @@
         document.getElementById('waterDeposit').style.height = `${depHeight}%`;
         document.getElementById('waterDeposit2').style.height = `${depHeight}%`;
         
-        document.getElementById('waterExpense').style.height = `${expHeight}%`;
-        document.getElementById('waterExpense2').style.height = `${expHeight}%`;
-        
-        document.getElementById('waterBalance').style.height = `${balHeight}%`;
-        document.getElementById('waterBalance2').style.height = `${balHeight}%`;
-
-        updateChart(expenseByCategory);
+    document.getElementById('waterExpense').style.height = `${expHeight}%`;
+    document.getElementById('waterExpense2').style.height = `${expHeight}%`;
+    
+    document.getElementById('waterBalance').style.height = `${balHeight}%`;
+    document.getElementById('waterBalance2').style.height = `${balHeight}%`;
+    
+    updateChart(expenseByCategory);
     }
-
+    
     function updateChart(expenseData) {
-        const ctx = document.getElementById('expenseChart').getContext('2d');
-        const labels = Object.keys(expenseData);
-        const data = Object.values(expenseData);
-
-        if(expenseChartInstance) expenseChartInstance.destroy();
-
-        if(labels.length === 0) {
-            expenseChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: { labels: ['কোনো খরচ নেই'], datasets: [{ data: [1], backgroundColor: ['#ddd'] }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-            return;
-        }
-
-        expenseChartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right', labels: { font: { size: 10, family: 'Segoe UI' } } }
-                }
-            }
-        });
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    const labels = Object.keys(expenseData);
+    const data = Object.values(expenseData);
+    
+    if(expenseChartInstance) expenseChartInstance.destroy();
+    
+    if(labels.length === 0) {
+    expenseChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['কোনো খরচ নেই'], datasets: [{ data: [1], backgroundColor: ['#ddd'] }] },
+    options: { responsive: true, maintainAspectRatio: false }
+    });
+    return;
     }
-
+    
+    expenseChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+    labels: labels,
+    datasets: [{
+    data: data,
+    backgroundColor: ['#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#4bc0c0', '#9966ff', '#ff9f40'],
+    borderWidth: 1
+    }]
+    },
+    options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+    legend: { position: 'right', labels: { font: { size: 10, family: 'Segoe UI' } } }
+    }
+    }
+    });
+    }
+    
     function generatePDF() {
-        const element = document.getElementById('printableArea');
-        const noPrintElements = element.querySelectorAll('.no-print');
-        noPrintElements.forEach(el => el.style.display = 'none');
-
-        const opt = {
-            margin: 5, 
-            filename: 'হিসাব_রিপোর্ট.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPdf: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            html2pdf().set(opt).from(element).save().then(() => {
-            noPrintElements.forEach(el => el.style.display = '');
-            });
-            }
-            
-            function exportCSV() {
-            const selectedDate = new Date(document.getElementById('monthSelector').value);
-            const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-            const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
-            
-            let csvContent = "data:text/csv;charset=utf-8,তারিখ,ধরন,ক্যাটাগরি,বিবরণ,পরিমাণ(টাকা)\n";
-            
-            transactions.forEach(t => {
-            const tDate = new Date(t.date);
-            if(tDate >= startOfMonth && tDate <= endOfMonth) {
-            const typeName = t.type === 'deposit' ? 'জমা' : 'ব্যয়';
-            const dText = tDate.toLocaleDateString('en-GB');
-            csvContent += `${dText},${typeName},${t.category},${t.desc},${t.amount}\n`;
-            }
-            });
-            
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Hisab_Report.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            }
-            
-            populateMonthSelector();
-            updateUI();
-            </script>
-            
-            </body>
-            </html>
+    const element = document.getElementById('printableArea');
+    const noPrintElements = element.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => el.style.display = 'none');
+    
+    const opt = {
+    margin: 5, 
+    filename: 'হিসাব_রিপোর্ট.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPdf: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+    noPrintElements.forEach(el => el.style.display = '');
+    });
+    }
+    
+    function exportCSV() {
+    const selectedDate = new Date(document.getElementById('monthSelector').value);
+    const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+    
+    let csvContent = "data:text/csv;charset=utf-8,তারিখ,ধরন,ক্যাটাগরি,বিবরণ,পরিমাণ(টাকা)\n";
+    
+    transactions.forEach(t => {
+    const tDate = new Date(t.date);
+    if(tDate >= startOfMonth && tDate <= endOfMonth) {
+    const typeName = t.type === 'deposit' ? 'জমা' : 'ব্যয়';
+    const dText = tDate.toLocaleDateString('en-GB');
+    csvContent += `${dText},${typeName},${t.category},${t.desc},${t.amount}\n`;
+    }
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Hisab_Report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    }
+    
+    populateMonthSelector();
+    updateUI();
+    </script>
+    
+    </body>
+    </html>
