@@ -410,17 +410,32 @@
         if (isNaN(amount) || amount <= 0) return alert("সঠিক টাকার পরিমাণ লিখুন।");
         if (category === 'ADD_NEW') return alert("দয়া করে একটি ক্যাটাগরি নির্বাচন করুন।");
 
-        transactions.push({
+        const newTransaction = {
             id: Date.now(),
             desc, category, amount, 
             type: currentType, 
             date: new Date().toISOString()
-        });
+        };
 
+        transactions.push(newTransaction);
         localStorage.setItem('myTransactionsPro', JSON.stringify(transactions));
         closeModal();
         document.getElementById('monthSelector').selectedIndex = 0;
         updateUI();
+
+        // --- গুগল শিটে অটোমেটিক ডেটা পাঠানোর কোড ---
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxfXVNsqjqP7acpSdZiER_hTS38uU4QQZ4SXynIhNNEZ-w3AWg73ncSj7g7bqky5B8N/exec";
+
+        if (WEB_APP_URL !== "") {
+            fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newTransaction)
+            }).catch(error => {
+                console.error("গুগল শিটে পাঠাতে সমস্যা হয়েছে:", error);
+            });
+        }
     }
 
     function deleteTransaction(id) {
@@ -539,8 +554,6 @@
 
     function generatePDF() {
         const element = document.getElementById('printableArea');
-        
-        // পিডিএফ তৈরির সময় ডিলিট বাটনগুলোর কলাম সাময়িকভাবে লুকিয়ে ফেলা হচ্ছে
         const noPrintElements = element.querySelectorAll('.no-print');
         noPrintElements.forEach(el => el.style.display = 'none');
 
@@ -550,42 +563,41 @@
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPdf: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            // পিডিএফ সেভ হওয়ার পর আবার আগের মতো বাটনগুলো ফিরিয়ে দেওয়া হচ্ছে
+            };
+            
+            html2pdf().set(opt).from(element).save().then(() => {
             noPrintElements.forEach(el => el.style.display = '');
-        });
-    }
-
-    function exportCSV() {
-        const selectedDate = new Date(document.getElementById('monthSelector').value);
-        const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-        const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
-        
-        let csvContent = "data:text/csv;charset=utf-8,তারিখ,ধরন,ক্যাটাগরি,বিবরণ,পরিমাণ(টাকা)\n";
-        
-        transactions.forEach(t => {
-        const tDate = new Date(t.date);
-        if(tDate >= startOfMonth && tDate <= endOfMonth) {
-        const typeName = t.type === 'deposit' ? 'জমা' : 'ব্যয়';
-        const dText = tDate.toLocaleDateString('en-GB');
-        csvContent += `${dText},${typeName},${t.category},${t.desc},${t.amount}\n`;
-        }
-        });
-        
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "Hisab_Report.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        }
-        
-        populateMonthSelector();
-        updateUI();
-        </script>
-        
-        </body>
-        </html>
+            });
+            }
+            
+            function exportCSV() {
+            const selectedDate = new Date(document.getElementById('monthSelector').value);
+            const startOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+            const endOfMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0, 23, 59, 59);
+            
+            let csvContent = "data:text/csv;charset=utf-8,তারিখ,ধরন,ক্যাটাগরি,বিবরণ,পরিমাণ(টাকা)\n";
+            
+            transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if(tDate >= startOfMonth && tDate <= endOfMonth) {
+            const typeName = t.type === 'deposit' ? 'জমা' : 'ব্যয়';
+            const dText = tDate.toLocaleDateString('en-GB');
+            csvContent += `${dText},${typeName},${t.category},${t.desc},${t.amount}\n`;
+            }
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Hisab_Report.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            }
+            
+            populateMonthSelector();
+            updateUI();
+            </script>
+            
+            </body>
+            </html>
